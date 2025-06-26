@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
+import Login from './components/Login'
+import CustomerManagement from './components/CustomerManagement'
+import TransactionManagement from './components/TransactionManagement'
 
 // Tema oluşturma
 const lightTheme = createTheme({
@@ -38,20 +41,57 @@ const darkTheme = createTheme({
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  const handleLogin = (newUserId: string) => {
+    setUserId(newUserId)
+  }
+
+  const handleLogout = () => {
+    setUserId(null)
+  }
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode)
   }
 
+  if (!userId) {
+    return (
+      <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+        <Login onLogin={handleLogin} />
+      </ThemeProvider>
+    )
+  }
+
   return (
     <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
       <BrowserRouter>
-        <Layout onThemeToggle={toggleTheme} isDarkMode={isDarkMode}>
+        <Layout 
+          onThemeToggle={toggleTheme} 
+          isDarkMode={isDarkMode}
+          onLogout={handleLogout}
+        >
           <Routes>
-            <Route path="/" element={<div>Dashboard</div>} />
-            <Route path="/customers" element={<div>Müşteriler</div>} />
-            <Route path="/payments" element={<div>Ödemeler</div>} />
-            <Route path="/reports" element={<div>Raporlar</div>} />
+            <Route 
+              path="/" 
+              element={<Navigate to="/customers" replace />} 
+            />
+            <Route 
+              path="/customers" 
+              element={<CustomerManagement userId={userId} />} 
+            />
+            <Route 
+              path="/transactions" 
+              element={
+                <TransactionManagement 
+                  userId={userId}
+                  onTransactionComplete={() => {
+                    // Bu fonksiyon müşteri listesini yenilemek için kullanılabilir
+                    // Şu an için boş bırakıyoruz
+                  }}
+                />
+              } 
+            />
           </Routes>
         </Layout>
       </BrowserRouter>

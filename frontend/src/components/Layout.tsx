@@ -1,172 +1,115 @@
-import { useState } from 'react';
+import { ReactNode } from 'react';
 import {
-  AppBar,
   Box,
-  CssBaseline,
-  Drawer,
+  AppBar,
+  Toolbar,
+  Typography,
   IconButton,
+  Drawer,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Toolbar,
-  Typography,
   useTheme,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Dashboard,
-  People,
-  AttachMoney,
-  Assessment,
-  DarkMode,
-  LightMode,
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon,
+  People as PeopleIcon,
+  Payment as PaymentIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-
-const drawerWidth = 240;
-
-const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/' },
-  { text: 'Müşteriler', icon: <People />, path: '/customers' },
-  { text: 'Ödemeler', icon: <AttachMoney />, path: '/payments' },
-  { text: 'Raporlar', icon: <Assessment />, path: '/reports' },
-];
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   onThemeToggle: () => void;
   isDarkMode: boolean;
+  onLogout: () => void;
 }
 
-const Layout = ({ children, onThemeToggle, isDarkMode }: LayoutProps) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+const Layout = ({ children, onThemeToggle, isDarkMode, onLogout }: LayoutProps) => {
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+  const menuItems = [
+    { text: 'Müşteriler', icon: <PeopleIcon />, path: '/customers' },
+    { text: 'İşlemler', icon: <PaymentIcon />, path: '/transactions' },
+  ];
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setDrawerOpen(false);
   };
-
-  const drawer = (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ color: 'text.primary' }}>
-          PayTrack
-        </Typography>
-      </Toolbar>
-      <List>
-        {menuItems.map((item) => (
-          <ListItem
-            component="div"
-            onClick={() => navigate(item.path)}
-            sx={{
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-              cursor: 'pointer',
-            }}
-            key={item.text}
-          >
-            <ListItemIcon sx={{ color: 'primary.main' }}>{item.icon}</ListItemIcon>
-            <ListItemText 
-              primary={item.text} 
-              sx={{ color: 'text.primary' }}
-            />
-          </ListItem>
-        ))}
-      </List>
-    </Box>
-  );
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'background.paper',
-          boxShadow: 1,
-        }}
-      >
+      <AppBar position="fixed">
         <Toolbar>
           <IconButton
             color="inherit"
-            aria-label="open drawer"
             edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }}
+            onClick={() => setDrawerOpen(true)}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography 
-            variant="h6" 
-            noWrap 
-            component="div" 
-            sx={{ flexGrow: 1, color: 'text.primary' }}
-          >
+          
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             PayTrack
           </Typography>
-          <IconButton 
-            onClick={onThemeToggle}
-            sx={{ color: 'text.primary' }}
-          >
-            {isDarkMode ? <LightMode /> : <DarkMode />}
+
+          <IconButton color="inherit" onClick={onThemeToggle}>
+            {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+
+          <IconButton color="inherit" onClick={onLogout}>
+            <LogoutIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
       >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
+        <Box
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              bgcolor: 'background.default',
-            },
+            width: 250,
+            pt: `${theme.mixins.toolbar.minHeight}px`,
           }}
+          role="presentation"
         >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              bgcolor: 'background.default',
-              borderRight: '1px solid',
-              borderColor: 'divider',
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
+          <List>
+            {menuItems.map((item) => (
+              <ListItem
+                button
+                key={item.text}
+                onClick={() => handleNavigation(item.path)}
+                selected={location.pathname === item.path}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
+
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          bgcolor: 'background.default',
-          minHeight: '100vh',
+          pt: `${theme.mixins.toolbar.minHeight + 16}px`,
+          height: '100vh',
+          overflow: 'auto',
         }}
       >
-        <Toolbar />
         {children}
       </Box>
     </Box>

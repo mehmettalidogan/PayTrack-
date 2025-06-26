@@ -3,11 +3,13 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from backend.database.database import db
 from backend.models.user import User
 from backend.models.customer import Customer, Transaction
 
 app = Flask(__name__)
+CORS(app)  # CORS desteği eklendi
 
 # Absolute path to the database file
 db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "paytrack.db"))
