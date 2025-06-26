@@ -2,101 +2,145 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from backend.models import Customer, User, save_pdf
+from flask import Flask, request, jsonify
+from backend.database.database import db
+from backend.models.user import User
+from backend.models.customer import Customer, Transaction
 
-def main():
-    # Kullanıcı oluştur
-    user = User("admin")
+app = Flask(__name__)
+
+# Absolute path to the database file
+db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "paytrack.db"))
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Flask-SQLAlchemy'yi başlat
+db.init_app(app)
+
+# Veritabanı tablolarını oluştur
+with app.app_context():
+    db.create_all()
+
+@app.route("/")
+def home():
+    return jsonify({
+        "message": "PayTrack API çalışıyor",
+        "endpoints": {
+            "POST /users/": "Yeni kullanıcı oluştur",
+            "POST /customers/": "Yeni müşteri ekle",
+            "GET /customers/": "Müşterileri listele",
+            "POST /customers/borc-ekle/": "Borç ekle",
+            "POST /customers/odeme-yap/": "Ödeme yap"
+        }
+    })
+
+@app.route("/users/", methods=["POST"])
+def create_user():
+    data = request.get_json()
+    username = data.get("username")
     
-    while True:
-        print("\n=== PayTrack Müşteri Takip Sistemi ===")
-        print("1. Yeni Müşteri Ekle")
-        print("2. Borç Ekle")
-        print("3. Ödeme Al")
-        print("4. Müşteri Listele")
-        print("5. Müşteri Detay Görüntüle")
-        print("6. PDF Raporu Oluştur")
-        print("0. Çıkış")
-        
-        secim = input("\nSeçiminiz (0-6): ")
-        
-        if secim == "1":
-            ad = input("Müşteri Adı: ")
-            urun = input("Ürün: ")
-            try:
-                borc = float(input("Başlangıç Borç: "))
-                user.musteri_ekle(ad, urun, borc)
-                print(f"\n✓ {ad} isimli müşteri başarıyla eklendi!")
-            except ValueError:
-                print("\n❌ Hata: Geçersiz borç miktarı!")
-                
-        elif secim == "2":
-            ad = input("Müşteri Adı: ")
-            try:
-                miktar = float(input("Borç Miktarı: "))
-                aciklama = input("Açıklama (opsiyonel): ")
-                if user.borc_ekle(ad, miktar, aciklama):
-                    print(f"\n✓ {ad} için {miktar}₺ borç eklendi!")
-                else:
-                    print("\n❌ Hata: Müşteri bulunamadı!")
-            except ValueError:
-                print("\n❌ Hata: Geçersiz miktar!")
-                
-        elif secim == "3":
-            ad = input("Müşteri Adı: ")
-            try:
-                miktar = float(input("Ödeme Miktarı: "))
-                aciklama = input("Açıklama (opsiyonel): ")
-                if user.odeme_yap(ad, miktar, aciklama):
-                    print(f"\n✓ {ad} için {miktar}₺ ödeme alındı!")
-                else:
-                    print("\n❌ Hata: Müşteri bulunamadı!")
-            except ValueError:
-                print("\n❌ Hata: Geçersiz miktar!")
-                
-        elif secim == "4":
-            print("\n=== Müşteri Listesi ===")
-            for i, musteri in enumerate(user.borclari_listele(), 1):
-                print(f"{i}. {musteri}")
-                
-        elif secim == "5":
-            ad = input("Müşteri Adı: ")
-            musteri = user.musteri_bul(ad)
-            if musteri:
-                print(f"\n=== {musteri.name} Detayları ===")
-                print(f"Ürün: {musteri.urun}")
-                print(f"Toplam Borç: {musteri.borc:.2f}₺")
-                print("\nİşlem Geçmişi:")
-                for islem in musteri.transactions:
-                    print(islem)
-            else:
-                print("\n❌ Hata: Müşteri bulunamadı!")
-                
-        elif secim == "6":
-            ad = input("Müşteri Adı: ")
-            musteri = user.musteri_bul(ad)
-            if musteri:
-                try:
-                    save_pdf(musteri)
-                    print(f"\n✓ PDF raporu oluşturuldu: {musteri.name}_borc_raporu.pdf")
-                except Exception as e:
-                    print(f"\n❌ Hata: PDF oluşturulamadı! {str(e)}")
-            else:
-                print("\n❌ Hata: Müşteri bulunamadı!")
-                
-        elif secim == "0":
-            print("\nProgramdan çıkılıyor...")
-            break
-            
-        else:
-            print("\n❌ Hata: Geçersiz seçim!")
-            
-        input("\nDevam etmek için Enter'a basın...")
+    if not username:
+        return jsonify({"error": "Kullanıcı adı gerekli"}), 400
+    
+    existing_user = db.session.query(User).filter(User.username == username).first()
+    if existing_user:
+        return jsonify({"error": "Kullanıcı adı zaten kullanımda"}), 400
+    
+    user = User(username=username)
+    db.session.add(user)
+    db.session.commit()
+    
+    return jsonify({
+        "message": "Kullanıcı başarıyla oluşturuldu",
+        "user_id": user.id
+    })
+
+@app.route("/customers/", methods=["POST"])
+def create_customer():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    name = data.get("name")
+    urun = data.get("urun")
+    borc = float(data.get("borc", 0.0))
+    
+    if not all([user_id, name, urun]):
+        return jsonify({"error": "user_id, name ve urun alanları gerekli"}), 400
+    
+    user = db.session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return jsonify({"error": "Kullanıcı bulunamadı"}), 404
+    
+    customer = user.musteri_ekle(name, urun, borc)
+    return jsonify({
+        "message": "Müşteri başarıyla eklendi",
+        "customer_id": customer.id
+    })
+
+@app.route("/customers/borc-ekle/", methods=["POST"])
+def add_debt():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    customer_name = data.get("customer_name")
+    miktar = data.get("miktar")
+    aciklama = data.get("aciklama", "")
+    
+    if not all([user_id, customer_name, miktar]):
+        return jsonify({"error": "user_id, customer_name ve miktar alanları gerekli"}), 400
+    
+    try:
+        miktar = float(miktar)
+    except ValueError:
+        return jsonify({"error": "Geçersiz miktar"}), 400
+    
+    user = db.session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return jsonify({"error": "Kullanıcı bulunamadı"}), 404
+    
+    success = user.borc_ekle(customer_name, miktar, aciklama)
+    if not success:
+        return jsonify({"error": "Müşteri bulunamadı"}), 404
+    
+    return jsonify({"message": "Borç başarıyla eklendi"})
+
+@app.route("/customers/odeme-yap/", methods=["POST"])
+def make_payment():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    customer_name = data.get("customer_name")
+    miktar = data.get("miktar")
+    aciklama = data.get("aciklama", "")
+    
+    if not all([user_id, customer_name, miktar]):
+        return jsonify({"error": "user_id, customer_name ve miktar alanları gerekli"}), 400
+    
+    try:
+        miktar = float(miktar)
+    except ValueError:
+        return jsonify({"error": "Geçersiz miktar"}), 400
+    
+    user = db.session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return jsonify({"error": "Kullanıcı bulunamadı"}), 404
+    
+    success = user.odeme_yap(customer_name, miktar, aciklama)
+    if not success:
+        return jsonify({"error": "Müşteri bulunamadı"}), 404
+    
+    return jsonify({"message": "Ödeme başarıyla kaydedildi"})
+
+@app.route("/customers/", methods=["GET"])
+def list_customers():
+    user_id = request.args.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "user_id parametresi gerekli"}), 400
+    
+    user = db.session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return jsonify({"error": "Kullanıcı bulunamadı"}), 404
+    
+    return jsonify(user.borclari_listele())
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\nProgram sonlandırıldı.")
-    except Exception as e:
-        print(f"\n❌ Beklenmeyen bir hata oluştu: {str(e)}")
+    print(f"Database path: {db_path}")
+    app.run(debug=True, host='0.0.0.0')
