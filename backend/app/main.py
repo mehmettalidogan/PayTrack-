@@ -129,13 +129,13 @@ def make_payment():
     data = request.get_json()
     user_id = data.get("user_id")
     customer_name = data.get("customer_name")
-    miktar = data.get("miktar")
+    amount = data.get("amount")
     
-    if not all([user_id, customer_name, miktar]):
-        return jsonify({"error": "user_id, customer_name ve miktar alanları gerekli"}), 400
+    if not all([user_id, customer_name, amount]):
+        return jsonify({"error": "user_id, customer_name ve amount alanları gerekli"}), 400
     
     try:
-        miktar = float(miktar)
+        amount = float(amount)
         customer = db.session.query(Customer).filter_by(
             user_id=user_id,
             name=customer_name
@@ -144,7 +144,7 @@ def make_payment():
         if not customer:
             return jsonify({"error": "Müşteri bulunamadı"}), 404
         
-        customer.add_transaction('odeme', miktar, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        customer.add_transaction('odeme', amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         db.session.commit()
         
         return jsonify({"message": "Ödeme başarıyla kaydedildi"})
@@ -245,6 +245,23 @@ def list_pdfs(customer_name):
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/customers/transactions/<customer_name>', methods=['GET'])
+def get_customer_transactions(customer_name):
+    """Müşterinin işlem geçmişini döndürür"""
+    try:
+        customer = db.session.query(Customer).filter_by(name=customer_name).first()
+        
+        if not customer:
+            return jsonify({'error': 'Müşteri bulunamadı!'}), 404
+        
+        transactions = customer.get_transaction_history()
+        return jsonify({
+            'success': True,
+            'transactions': [t.to_dict() for t in transactions]
+        })
+    except Exception as e:
+        return jsonify({'error': f'İşlem geçmişi alınırken bir hata oluştu: {str(e)}'}), 500
 
 if __name__ == "__main__":
     print(f"Database path: {db_path}")

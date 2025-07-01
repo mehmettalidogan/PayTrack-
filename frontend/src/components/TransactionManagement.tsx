@@ -13,8 +13,27 @@ import {
   CircularProgress,
   Fade,
   useTheme,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  History as HistoryIcon,
+  Close as CloseIcon,
+} from '@mui/icons-material';
 
 interface TransactionManagementProps {
   userId: string;
@@ -26,13 +45,23 @@ interface Customer {
   debt: number;
 }
 
+interface Transaction {
+  timestamp: string;
+  amount: number;
+  transaction_type: string;
+  description: string;
+}
+
 const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [amount, setAmount] = useState('');
+  const [transactionType, setTransactionType] = useState<'borc' | 'odeme'>('borc');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const theme = useTheme();
 
   const fetchCustomers = async () => {
@@ -49,6 +78,21 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
         setCustomers(parsedCustomers);
       } else {
         setError('Müşteri listesi alınamadı!');
+      }
+    } catch (err) {
+      setError('API\'ye bağlanılamadı!');
+    }
+  };
+
+  const fetchTransactions = async (customerName: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/customers/transactions/${customerName}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setTransactions(data.transactions);
+      } else {
+        setError('İşlem geçmişi alınamadı!');
       }
     } catch (err) {
       setError('API\'ye bağlanılamadı!');
@@ -73,7 +117,8 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/customers/borc-ekle/', {
+      const endpoint = transactionType === 'borc' ? 'borc-ekle' : 'odeme-yap';
+      const response = await fetch(`http://localhost:5000/customers/${endpoint}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +131,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
       });
 
       if (response.ok) {
-        setSuccess('İşlem başarıyla kaydedildi!');
+        setSuccess(`${transactionType === 'borc' ? 'Borç' : 'Ödeme'} işlemi başarıyla kaydedildi!`);
         setSelectedCustomer('');
         setAmount('');
         fetchCustomers();
@@ -99,6 +144,11 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewHistory = async (customerName: string) => {
+    await fetchTransactions(customerName);
+    setHistoryDialogOpen(true);
   };
 
   return (
@@ -143,6 +193,17 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                       </MenuItem>
                     ))}
                   </TextField>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>İşlem Tipi</InputLabel>
+                    <Select
+                      value={transactionType}
+                      label="İşlem Tipi"
+                      onChange={(e) => setTransactionType(e.target.value as 'borc' | 'odeme')}
+                    >
+                      <MenuItem value="borc">Borç Ekle</MenuItem>
+                      <MenuItem value="odeme">Ödeme Al</MenuItem>
+                    </Select>
+                  </FormControl>
                   <TextField
                     label="Tutar"
                     type="number"
@@ -195,32 +256,45 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                       sx={{
                         p: 2,
                         borderRadius: 1,
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.03)'
-                          : 'rgba(0, 0, 0, 0.02)',
+                        border: `1px solid ${theme.palette.divider}`,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' 
+                          backgroundColor: theme.palette.mode === 'dark'
                             ? 'rgba(255, 255, 255, 0.05)'
-                            : 'rgba(0, 0, 0, 0.03)',
+                            : 'rgba(0, 0, 0, 0.02)',
+                          transform: 'translateX(4px)',
                         }
                       }}
                     >
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                        {customer.name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {customer.product}
-                      </Typography>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          mt: 1,
-                          color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
-                          fontWeight: 600
-                        }}
-                      >
-                        Borç: {customer.debt.toLocaleString('tr-TR')} ₺
-                      </Typography>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {customer.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {customer.product}
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            mt: 1,
+                            color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
+                            fontWeight: 600
+                          }}
+                        >
+                          Borç: {customer.debt.toLocaleString('tr-TR')} ₺
+                        </Typography>
+                      </Box>
+                      <Tooltip title="İşlem Geçmişi">
+                        <IconButton
+                          onClick={() => handleViewHistory(customer.name)}
+                          size="small"
+                        >
+                          <HistoryIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   ))}
                 </Box>
@@ -230,17 +304,70 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
         </Grid>
       </Grid>
 
+      {/* İşlem Geçmişi Dialog */}
+      <Dialog
+        open={historyDialogOpen}
+        onClose={() => setHistoryDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, p: 2 }}>
+          <Typography variant="h6">
+            İşlem Geçmişi
+          </Typography>
+          <IconButton
+            onClick={() => setHistoryDialogOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Tarih</TableCell>
+                  <TableCell>İşlem Tipi</TableCell>
+                  <TableCell align="right">Tutar</TableCell>
+                  <TableCell>Açıklama</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {transactions.map((transaction, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{transaction.timestamp}</TableCell>
+                    <TableCell>
+                      {transaction.transaction_type === 'borc' ? 'Borç Ekleme' : 'Ödeme'}
+                    </TableCell>
+                    <TableCell align="right" sx={{
+                      color: transaction.transaction_type === 'borc'
+                        ? theme.palette.error.main
+                        : theme.palette.success.main,
+                      fontWeight: 600
+                    }}>
+                      {transaction.amount.toLocaleString('tr-TR')} ₺
+                    </TableCell>
+                    <TableCell>{transaction.description}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+      </Dialog>
+
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
         onClose={() => setError('')}
-        TransitionComponent={Fade}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          severity="error" 
-          onClose={() => setError('')}
-          variant="filled"
-        >
+        <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
           {error}
         </Alert>
       </Snackbar>
@@ -249,13 +376,9 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
         open={!!success}
         autoHideDuration={6000}
         onClose={() => setSuccess('')}
-        TransitionComponent={Fade}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          severity="success" 
-          onClose={() => setSuccess('')}
-          variant="filled"
-        >
+        <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
           {success}
         </Alert>
       </Snackbar>

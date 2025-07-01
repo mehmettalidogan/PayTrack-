@@ -88,4 +88,13 @@ class Transaction(Base):
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
 
     # İlişkiler
-    customer: Mapped["Customer"] = relationship(back_populates="transactions") 
+    customer: Mapped["Customer"] = relationship(back_populates="transactions")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'transaction_type': self.transaction_type,
+            'description': self.description,
+            'timestamp': self.timestamp
+        }
