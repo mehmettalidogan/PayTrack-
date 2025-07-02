@@ -17,12 +17,21 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  InputAdornment,
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Paper,
 } from '@mui/material';
 import {
   Add as AddIcon,
   PictureAsPdf as PdfIcon,
   Refresh as RefreshIcon,
   Close as CloseIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import PDFViewer from './PDFViewer';
 
@@ -38,6 +47,7 @@ interface Customer {
 
 const CustomerManagement = ({ userId }: CustomerManagementProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     product: '',
@@ -159,6 +169,11 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
     setPdfDialogOpen(true);
   };
 
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.product.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <Box sx={{ p: 2, height: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -256,88 +271,77 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
           </Fade>
         </Grid>
 
-        <Grid item xs={12} sx={{ height: '60%' }}>
-          <Fade in timeout={1000}>
-            <Card
-              sx={{
-                height: '100%',
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)'
-                  : 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(6px)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">
-                  Müşteri Listesi
-                </Typography>
-                <Typography variant="caption" color="textSecondary">
-                  {customers.length} müşteri
-                </Typography>
-              </Box>
-              
-              <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-                <Grid container spacing={2}>
-                  {customers.map((customer) => (
-                    <Grid item xs={12} key={customer.name}>
-                      <Card
-                        sx={{
-                          p: 2,
-                          backgroundColor: 'transparent',
-                          border: `1px solid ${theme.palette.divider}`,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.mode === 'dark'
-                              ? 'rgba(255, 255, 255, 0.05)'
-                              : 'rgba(0, 0, 0, 0.02)',
-                            transform: 'translateX(4px)',
-                          }
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                              {customer.name}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {customer.product}
-                            </Typography>
-                            <Typography 
-                              variant="body1" 
-                              sx={{ 
-                                mt: 1,
-                                color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
-                                fontWeight: 600
-                              }}
-                            >
-                              Borç: {customer.debt.toLocaleString('tr-TR')} ₺
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Tooltip title="PDF Oluştur">
-                              <IconButton
-                                onClick={() => handleGeneratePdf(customer.name)}
-                                disabled={pdfGenerating === customer.name}
-                                size="small"
-                              >
-                                {pdfGenerating === customer.name ? (
-                                  <CircularProgress size={20} />
-                                ) : (
-                                  <PdfIcon />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                      </Card>
-                    </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Müşteri Ara..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="İsim veya ürüne göre ara"
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+            }}
+          />
+        </Grid>
+
+        <Grid item xs={12} sx={{ height: '60%', overflowY: 'auto' }}>
+          <Card sx={{ height: '100%', p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Müşteri Listesi ({filteredCustomers.length})
+              </Typography>
+              <TextField
+                size="small"
+                placeholder="Müşteri veya ürün ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ width: 250 }}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                }}
+              />
+            </Box>
+
+            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100% - 60px)', backgroundColor: 'transparent' }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Müşteri Adı</TableCell>
+                    <TableCell>Ürün</TableCell>
+                    <TableCell>Borç</TableCell>
+                    <TableCell align="right">İşlemler</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredCustomers.map((customer) => (
+                    <TableRow key={customer.name}>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.product}</TableCell>
+                      <TableCell sx={{ color: customer.debt > 0 ? 'error.main' : 'success.main' }}>
+                        {customer.debt.toLocaleString('tr-TR')} ₺
+                      </TableCell>
+                      <TableCell align="right">
+                        <Tooltip title="PDF Oluştur">
+                          <IconButton
+                            onClick={() => handleGeneratePdf(customer.name)}
+                            disabled={pdfGenerating === customer.name}
+                          >
+                            {pdfGenerating === customer.name ? (
+                              <CircularProgress size={24} />
+                            ) : (
+                              <PdfIcon />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Grid>
-              </Box>
-            </Card>
-          </Fade>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
         </Grid>
       </Grid>
 
