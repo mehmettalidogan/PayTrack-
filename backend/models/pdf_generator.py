@@ -6,17 +6,54 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
+import glob
+import shutil
 from datetime import datetime
 from .customer import Customer
 
+def delete_old_pdfs(customer_name, reports_dir):
+    """Müşteriye ait tüm eski PDF'leri sil"""
+    pattern = os.path.join(reports_dir, f"rapor_{customer_name}*.pdf")
+    old_pdfs = glob.glob(pattern)
+    
+    for pdf in old_pdfs:
+        try:
+            if os.path.exists(pdf):
+                # Önce dosyayı kapatmaya çalış
+                try:
+                    with open(pdf, 'r+b') as f:
+                        f.close()
+                except:
+                    pass
+                
+                # Dosyayı silmeyi dene
+                try:
+                    os.remove(pdf)
+                except:
+                    try:
+                        # os.remove çalışmazsa unlink dene
+                        os.unlink(pdf)
+                    except:
+                        # Son çare olarak shutil.rmtree kullan
+                        try:
+                            shutil.rmtree(pdf, ignore_errors=True)
+                        except:
+                            pass
+        except Exception as e:
+            print(f"PDF silinirken hata: {pdf} - {str(e)}")
+
 def save_pdf(customer: Customer):
     """Müşteri bilgilerini PDF olarak kaydeder"""
-    # PDF dosya adını oluştur
-    filename = f"rapor_{customer.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    filepath = os.path.join(os.path.dirname(__file__), '..', 'reports', filename)
-    
     # Reports klasörünü oluştur
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    reports_dir = os.path.join(os.path.dirname(__file__), '..', 'reports')
+    os.makedirs(reports_dir, exist_ok=True)
+    
+    # Önce eski PDF'leri sil
+    delete_old_pdfs(customer.name, reports_dir)
+    
+    # Yeni PDF dosya adını oluştur
+    filename = f"rapor_{customer.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    filepath = os.path.join(reports_dir, filename)
     
     # PDF dokümanını oluştur
     doc = SimpleDocTemplate(
@@ -64,7 +101,7 @@ def save_pdf(customer: Customer):
         ['Müşteri Adı:', customer.name],
         ['Ürün:', customer.urun],
         ['Toplam Borç:', f"{customer.borc:.2f} ₺"],
-        ['Rapor Tarihi:', datetime.now().strftime('%d.%m.%Y %H:%M')]
+        ['Son Güncelleme:', datetime.now().strftime('%d.%m.%Y %H:%M')]
     ]
     
     t = Table(customer_info, colWidths=[120, 300])
@@ -82,22 +119,30 @@ def save_pdf(customer: Customer):
     elements.append(Spacer(1, 30))
     
     # İşlem Geçmişi
-    if customer.transactions:
+    transactions = customer.get_transaction_history()
+    if transactions:
         elements.append(Paragraph('İşlem Geçmişi', styles['CustomHeading']))
         elements.append(Spacer(1, 10))
         
         # Tablo başlıkları
-        transaction_data = [['Tarih', 'İşlem Tipi', 'Tutar']]
+        transaction_data = [['Tarih', 'İşlem Tipi', 'Tutar', 'Kalan Borç']]
         
         # İşlem verileri
-        for transaction in customer.get_transaction_history():
+        running_total = 0
+        for transaction in transactions:
+            if transaction.transaction_type == 'borc':
+                running_total += transaction.amount
+            else:
+                running_total -= transaction.amount
+                
             transaction_data.append([
-                transaction.timestamp,
+                transaction.timestamp.strftime('%d.%m.%Y %H:%M'),
                 'Borç Ekleme' if transaction.transaction_type == 'borc' else 'Ödeme',
-                f"{transaction.amount:.2f} ₺"
+                f"{transaction.amount:.2f} ₺",
+                f"{running_total:.2f} ₺"
             ])
         
-        t = Table(transaction_data, colWidths=[150, 150, 120])
+        t = Table(transaction_data, colWidths=[120, 120, 100, 100])
         t.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
@@ -117,7 +162,7 @@ def save_pdf(customer: Customer):
     # Alt Bilgi
     elements.append(Spacer(1, 40))
     elements.append(Paragraph(
-        'Bu rapor otomatik olarak oluşturulmuştur.',
+        f'Bu rapor {datetime.now().strftime("%d.%m.%Y %H:%M")} tarihinde güncellenmiştir.',
         ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
@@ -129,4 +174,8 @@ def save_pdf(customer: Customer):
     
     # PDF'i oluştur
     doc.build(elements)
+    
+    # Son bir kez daha eski PDF'leri kontrol et ve sil
+    delete_old_pdfs(customer.name, reports_dir)
+    
     return filepath 

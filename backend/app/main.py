@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -7,7 +8,7 @@ from flask_cors import CORS
 from backend.database.database import db
 from backend.models.user import User
 from backend.models.customer import Customer, Transaction
-from backend.models.pdf_generator import save_pdf
+from backend.models.pdf_generator import save_pdf, delete_old_pdfs
 from datetime import datetime
 
 app = Flask(__name__)
@@ -236,14 +237,40 @@ def get_pdf(filename):
 
 @app.route('/pdf/list/<customer_name>')
 def list_pdfs(customer_name):
-    """Müşteriye ait PDF'leri listele"""
+    """Müşteriye ait en son PDF'i listele"""
     try:
-        pdfs = [f for f in os.listdir(PDF_DIR) if f.startswith(f'rapor_{customer_name}_')]
+        # Reports klasörünü kontrol et
+        reports_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'reports')
+        
+        # Müşterinin tüm PDF'lerini bul ve tarihe göre sırala
+        pdfs = sorted(
+            [f for f in os.listdir(reports_dir) if f.startswith(f'rapor_{customer_name}_')],
+            key=lambda x: os.path.getmtime(os.path.join(reports_dir, x)),
+            reverse=True
+        )
+        
+        if pdfs:
+            latest_pdf = pdfs[0]  # En son oluşturulan PDF
+            
+            # Eski PDF'leri sil
+            for old_pdf in pdfs[1:]:
+                try:
+                    old_pdf_path = os.path.join(reports_dir, old_pdf)
+                    subprocess.run(['del', '/F', '/Q', old_pdf_path], shell=True, check=True)
+                except:
+                    pass  # Hata olursa devam et
+            
+            return jsonify({
+                'success': True,
+                'pdfs': [{'filename': latest_pdf, 'url': f'/pdf/{latest_pdf}'}]
+            })
+        
         return jsonify({
             'success': True,
-            'pdfs': [{'filename': pdf, 'url': f'/pdf/{pdf}'} for pdf in pdfs]
+            'pdfs': []
         })
     except Exception as e:
+        print(f"PDF listeleme hatası: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/customers/transactions/<customer_name>', methods=['GET'])
