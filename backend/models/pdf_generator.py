@@ -1,7 +1,7 @@
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
+from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 import os
 import glob
@@ -11,31 +11,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def delete_old_pdfs(customer_name, reports_dir):
-    """Müşteriye ait tüm eski PDF'leri sil"""
-    pattern = os.path.join(reports_dir, f"rapor_{customer_name}*.pdf")
-    old_pdfs = glob.glob(pattern)
-    
-    for pdf in old_pdfs:
+# PDF dosyalarının bulunduğu dizin
+PDF_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'reports')
+
+def delete_old_pdfs():
+    """24 saatten eski PDF dosyalarını siler"""
+    try:
+        now = datetime.now()
+        for pdf in os.listdir(PDF_DIR):
+            if pdf.endswith('.pdf'):
+                pdf_path = os.path.join(PDF_DIR, pdf)
+                file_time = datetime.fromtimestamp(os.path.getctime(pdf_path))
+                if (now - file_time).days >= 1:
+                    os.remove(pdf_path)
+                    logger.info(f"Eski PDF silindi: {pdf}")
+    except Exception as e:
+        logger.error(f"PDF silinirken hata: {str(e)}")
+
+def parse_timestamp(timestamp_str):
+    """Timestamp string'ini datetime objesine çevirir"""
+    try:
+        # Önce tam format ile dene
+        return datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
         try:
-            if os.path.exists(pdf):
-                try:
-                    with open(pdf, 'r+b') as f:
-                        f.close()
-                except:
-                    pass
-                try:
-                    os.remove(pdf)
-                except:
-                    try:
-                        os.unlink(pdf)
-                    except:
-                        try:
-                            shutil.rmtree(pdf, ignore_errors=True)
-                        except:
-                            pass
-        except Exception as e:
-            logger.error(f"PDF silinirken hata: {pdf} - {str(e)}")
+            # Eğer saniye yoksa bu format ile dene
+            return datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M')
+        except ValueError as e:
+            logger.error(f"Timestamp ayrıştırma hatası: {str(e)}")
+            raise
 
 def save_pdf(customer):
     """Müşteri bilgilerini PDF olarak kaydeder"""
@@ -48,143 +52,125 @@ def save_pdf(customer):
         logger.info(f"PDF raporları dizini: {reports_dir}")
         
         # Önce eski PDF'leri sil
-        delete_old_pdfs(customer.name, reports_dir)
+        delete_old_pdfs()
         logger.info("Eski PDF'ler silindi")
         
         # Yeni PDF dosya adını oluştur
-        filename = f"rapor_{customer.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        filepath = os.path.join(reports_dir, filename)
+        filename = f"rapor_{customer.name.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filepath = os.path.join(PDF_DIR, filename)
         logger.info(f"Yeni PDF dosya yolu: {filepath}")
         
         # Dizin izinlerini kontrol et
         if not os.access(reports_dir, os.W_OK):
             logger.error(f"HATA: {reports_dir} dizinine yazma izni yok!")
             raise PermissionError(f"{reports_dir} dizinine yazma izni yok!")
-        
+
+        # Stil tanımlamaları
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=20,
+            alignment=1  # Center alignment
+        )
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=12,
+            spaceAfter=10
+        )
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceAfter=5
+        )
+
         # PDF dokümanını oluştur
         doc = SimpleDocTemplate(
             filepath,
             pagesize=A4,
-            rightMargin=2*cm,
-            leftMargin=2*cm,
-            topMargin=2*cm,
-            bottomMargin=2*cm
+            rightMargin=20*mm,
+            leftMargin=20*mm,
+            topMargin=20*mm,
+            bottomMargin=20*mm
         )
-        logger.info("PDF dokümanı oluşturuldu")
-        
-        # Stil tanımlamaları
-        styles = getSampleStyleSheet()
-        styles.add(ParagraphStyle(
-            name='CustomTitle',
-            parent=styles['Title'],
-            fontSize=24,
-            spaceAfter=30,
-            textColor=colors.HexColor('#1976D2')
-        ))
-        styles.add(ParagraphStyle(
-            name='CustomHeading',
-            parent=styles['Heading1'],
-            fontSize=16,
-            spaceAfter=20,
-            textColor=colors.HexColor('#333333')
-        ))
-        styles.add(ParagraphStyle(
-            name='CustomBody',
-            parent=styles['Normal'],
-            fontSize=12,
-            spaceAfter=12,
-            textColor=colors.HexColor('#666666')
-        ))
-        
+
         # PDF içeriğini oluştur
         elements = []
-        
+
         # Başlık
-        elements.append(Paragraph('Müşteri Raporu', styles['CustomTitle']))
-        elements.append(Spacer(1, 20))
+        elements.append(Paragraph('Müşteri Borç Raporu', title_style))
+        elements.append(Spacer(1, 10*mm))
+
+        # Müşteri bilgileri
+        elements.append(Paragraph(f'Müşteri: {customer.name}', heading_style))
+        elements.append(Paragraph(f'Ürün: {customer.urun}', heading_style))
+        elements.append(Paragraph(f'Güncel Borç: {customer.borc:.2f} ₺', heading_style))
+        elements.append(Spacer(1, 10*mm))
+
+        # İşlem geçmişi başlığı
+        elements.append(Paragraph('İşlem Geçmişi', heading_style))
+        elements.append(Spacer(1, 5*mm))
+
+        # İşlemler tablosu
+        table_data = [['Tarih', 'İşlem Tipi', 'Tutar', 'Açıklama']]
         
-        # Müşteri Bilgileri
-        customer_info = [
-            ['Müşteri Adı:', customer.name],
-            ['Ürün:', customer.urun],
-            ['Toplam Borç:', f"{customer.borc:.2f} ₺"],
-            ['Son Güncelleme:', datetime.now().strftime('%d.%m.%Y %H:%M')]
-        ]
+        # İşlemleri tarihe göre sırala
+        sorted_transactions = sorted(
+            customer.transactions,
+            key=lambda x: parse_timestamp(x.timestamp),
+            reverse=True
+        )
         
-        t = Table(customer_info, colWidths=[120, 300])
-        t.setStyle(TableStyle([
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#666666')),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#333333')),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#EEEEEE')),
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F5F5F5')),
-        ]))
-        elements.append(t)
-        elements.append(Spacer(1, 30))
-        
-        # İşlem Geçmişi
-        transactions = customer.get_transaction_history()
-        logger.info(f"İşlem geçmişi alındı: {len(transactions)} işlem bulundu")
-        
-        if transactions:
-            elements.append(Paragraph('İşlem Geçmişi', styles['CustomHeading']))
-            elements.append(Spacer(1, 10))
-            
-            # Tablo başlıkları
-            transaction_data = [['Tarih', 'İşlem Tipi', 'Tutar']]
-            
-            # İşlem verileri - tarihe göre sırala (yeniden eskiye)
-            transactions.sort(key=lambda x: x.timestamp, reverse=True)
-            
-            for transaction in transactions:
-                # timestamp hem string hem datetime olabilir, kontrol et
-                timestamp = transaction.timestamp
-                if isinstance(timestamp, str):
-                    try:
-                        timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
-                    except ValueError:
-                        try:
-                            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M')
-                        except Exception:
-                            timestamp = datetime.now()
-                
-                transaction_data.append([
-                    timestamp.strftime('%d.%m.%Y %H:%M'),
-                    'Borç Ekleme' if transaction.transaction_type == 'borc' else 'Ödeme',
-                    f"{transaction.amount:.2f} ₺"
-                ])
-            
-            t = Table(transaction_data, colWidths=[140, 140, 140])
-            t.setStyle(TableStyle([
-                ('FONTSIZE', (0, 0), (-1, -1), 11),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#FFFFFF')),  # Başlık rengi
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#666666')),  # İçerik rengi
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1976D2')),  # Başlık arka plan
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#EEEEEE')),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ]))
-            elements.append(t)
-        else:
-            elements.append(Paragraph('Henüz işlem geçmişi bulunmamaktadır.', styles['CustomBody']))
-        
-        # Alt Bilgi
-        elements.append(Spacer(1, 40))
+        for transaction in sorted_transactions:
+            islem_tipi = 'Borç Ekleme' if transaction.transaction_type == 'borc' else 'Ödeme'
+            # String timestamp'i datetime'a çevir ve formatla
+            tarih = parse_timestamp(transaction.timestamp).strftime('%d/%m/%Y %H:%M')
+            table_data.append([
+                tarih,
+                islem_tipi,
+                f'{transaction.amount:.2f} ₺',
+                transaction.description or '-'
+            ])
+
+        # Tablo stilleri
+        table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ALIGN', (2, 1), (2, -1), 'RIGHT'),  # Tutar sağa yaslı
+            ('ALIGN', (3, 1), (3, -1), 'LEFT'),   # Açıklama sola yaslı
+        ])
+
+        # Tablo genişlikleri (A4 genişliği ~210mm, kenar boşlukları çıkarılınca ~170mm)
+        col_widths = [45*mm, 35*mm, 35*mm, 55*mm]
+        table = Table(table_data, colWidths=col_widths)
+        table.setStyle(table_style)
+        elements.append(table)
+
+        # Rapor tarihi
+        elements.append(Spacer(1, 10*mm))
         elements.append(Paragraph(
-            f'Bu rapor {datetime.now().strftime("%d.%m.%Y %H:%M")} tarihinde güncellenmiştir.',
+            f'Rapor Tarihi: {datetime.now().strftime("%d/%m/%Y %H:%M")}',
             ParagraphStyle(
-                'Footer',
+                'RaporTarihi',
                 parent=styles['Normal'],
-                fontSize=10,
-                textColor=colors.HexColor('#999999'),
-                alignment=1
+                fontSize=9,
+                alignment=2  # Right alignment
             )
         ))
-        
+
         # PDF'i oluştur
         try:
             doc.build(elements)

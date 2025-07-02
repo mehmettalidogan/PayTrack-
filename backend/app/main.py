@@ -124,7 +124,8 @@ def add_debt():
             return jsonify({'error': 'Müşteri bulunamadı!'}), 404
         
         amount = float(data['amount'])
-        customer.add_transaction('borc', amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        description = data.get('description', '')  # Açıklama alanını al
+        customer.add_transaction('borc', amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), description)
         db.session.commit()
         
         return jsonify({'message': 'Borç başarıyla eklendi!'})
@@ -140,6 +141,7 @@ def make_payment():
     user_id = data.get("user_id")
     customer_name = data.get("customer_name")
     amount = data.get("amount")
+    description = data.get("description", "")  # Açıklama alanını al
     
     if not all([user_id, customer_name, amount]):
         return jsonify({"error": "user_id, customer_name ve amount alanları gerekli"}), 400
@@ -154,7 +156,7 @@ def make_payment():
         if not customer:
             return jsonify({"error": "Müşteri bulunamadı"}), 404
         
-        customer.add_transaction('odeme', amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        customer.add_transaction('odeme', amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), description)
         db.session.commit()
         
         return jsonify({"message": "Ödeme başarıyla kaydedildi"})

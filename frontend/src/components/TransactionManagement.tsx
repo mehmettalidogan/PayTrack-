@@ -56,6 +56,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
   const [transactionType, setTransactionType] = useState<'borc' | 'odeme'>('borc');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -105,7 +106,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
 
   const handleAddTransaction = async () => {
     if (!selectedCustomer || !amount) {
-      setError('Tüm alanları doldurun!');
+      setError('Müşteri ve tutar alanları zorunludur!');
       return;
     }
 
@@ -127,6 +128,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
           user_id: userId,
           customer_name: selectedCustomer,
           amount: parsedAmount,
+          description: description.trim(),
         }),
       });
 
@@ -134,6 +136,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
         setSuccess(`${transactionType === 'borc' ? 'Borç' : 'Ödeme'} işlemi başarıyla kaydedildi!`);
         setSelectedCustomer('');
         setAmount('');
+        setDescription('');
         fetchCustomers();
       } else {
         const data = await response.json();
@@ -182,48 +185,61 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                   component="form" 
                   sx={{ 
                     display: 'flex', 
-                    flexDirection: 'row', 
+                    flexDirection: 'column', 
                     gap: 2,
                     flex: 1,
-                    alignItems: 'center'
                   }}
                 >
-                  <TextField
-                    select
-                    label="Müşteri"
-                    value={selectedCustomer}
-                    onChange={(e) => setSelectedCustomer(e.target.value)}
-                    fullWidth
-                    size="small"
-                  >
-                    {customers.map((customer) => (
-                      <MenuItem key={customer.name} value={customer.name}>
-                        {customer.name} - Mevcut Borç: {customer.debt.toLocaleString('tr-TR')} ₺
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>İşlem Tipi</InputLabel>
-                    <Select
-                      value={transactionType}
-                      label="İşlem Tipi"
-                      onChange={(e) => setTransactionType(e.target.value as 'borc' | 'odeme')}
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                    <TextField
+                      select
+                      label="Müşteri"
+                      value={selectedCustomer}
+                      onChange={(e) => setSelectedCustomer(e.target.value)}
+                      fullWidth
+                      size="small"
                     >
-                      <MenuItem value="borc">Borç Ekle</MenuItem>
-                      <MenuItem value="odeme">Ödeme Al</MenuItem>
-                    </Select>
-                  </FormControl>
+                      {customers.map((customer) => (
+                        <MenuItem key={customer.name} value={customer.name}>
+                          {customer.name} - Mevcut Borç: {customer.debt.toLocaleString('tr-TR')} ₺
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>İşlem Tipi</InputLabel>
+                      <Select
+                        value={transactionType}
+                        label="İşlem Tipi"
+                        onChange={(e) => setTransactionType(e.target.value as 'borc' | 'odeme')}
+                      >
+                        <MenuItem value="borc">Borç Ekle</MenuItem>
+                        <MenuItem value="odeme">Ödeme Al</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      label="Tutar"
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      fullWidth
+                      size="small"
+                      InputProps={{
+                        endAdornment: <Typography variant="caption">₺</Typography>
+                      }}
+                    />
+                  </Box>
+                  
                   <TextField
-                    label="Tutar"
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    label="Açıklama"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     fullWidth
                     size="small"
-                    InputProps={{
-                      endAdornment: <Typography variant="caption">₺</Typography>
-                    }}
+                    multiline
+                    rows={2}
+                    placeholder="İşlem için açıklama ekleyin (opsiyonel)"
                   />
+
                   <Button
                     variant="contained"
                     onClick={handleAddTransaction}
@@ -231,6 +247,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                     startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
                     sx={{
                       height: 40,
+                      alignSelf: 'flex-end',
                       minWidth: 150,
                       textTransform: 'none',
                       fontWeight: 600,
