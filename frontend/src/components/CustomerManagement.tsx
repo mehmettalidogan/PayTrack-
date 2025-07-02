@@ -123,6 +123,7 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
   const handleGeneratePdf = async (customerName: string) => {
     setPdfGenerating(customerName);
     try {
+      console.log('PDF oluşturma isteği gönderiliyor...');
       const response = await fetch('http://localhost:5000/generate-pdf/', {
         method: 'POST',
         headers: {
@@ -134,16 +135,20 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
         }),
       });
 
+      const data = await response.json();
+      console.log('PDF oluşturma yanıtı:', data);
+
       if (response.ok) {
         setSuccess('PDF başarıyla oluşturuldu!');
         setSelectedCustomer(customerName);
         setPdfDialogOpen(true);
       } else {
-        const data = await response.json();
         setError(data.error || 'PDF oluşturulurken bir hata oluştu!');
+        console.error('PDF oluşturma hatası:', data.error);
       }
     } catch (err) {
-      setError('API\'ye bağlanılamadı!');
+      console.error('PDF oluşturma işleminde hata:', err);
+      setError('PDF oluşturulurken bir hata oluştu! Lütfen tekrar deneyin.');
     } finally {
       setPdfGenerating(null);
     }
@@ -342,13 +347,15 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            {selectedCustomer} - PDF Görüntüleyici
-          </Typography>
-          <IconButton onClick={() => setPdfDialogOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              {selectedCustomer} - PDF Raporu
+            </Typography>
+            <IconButton onClick={() => setPdfDialogOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
         </DialogTitle>
         <DialogContent>
           {selectedCustomer && (

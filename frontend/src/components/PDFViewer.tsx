@@ -23,18 +23,26 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ customerName }) => {
   useEffect(() => {
     const fetchPdfs = async () => {
       try {
+        console.log('PDF listesi alınıyor...');
         const response = await fetch(`http://localhost:5000/pdf/list/${customerName}`);
         const data = await response.json();
+        console.log('PDF listesi yanıtı:', data);
         
         if (data.success) {
           setPdfs(data.pdfs);
           if (data.pdfs.length > 0) {
-            setSelectedPdf(`http://localhost:5000${data.pdfs[0].url}`);
+            const pdfUrl = `http://localhost:5000${data.pdfs[0].url}`;
+            console.log('Seçilen PDF URL:', pdfUrl);
+            setSelectedPdf(pdfUrl);
+          } else {
+            console.log('Müşteri için PDF bulunamadı');
           }
         } else {
+          console.error('PDF listesi alınamadı:', data.error);
           setError(data.error || 'PDF listesi alınamadı');
         }
       } catch (err) {
+        console.error('PDF listesi alınırken hata:', err);
         setError('PDF listesi yüklenirken bir hata oluştu');
       } finally {
         setLoading(false);

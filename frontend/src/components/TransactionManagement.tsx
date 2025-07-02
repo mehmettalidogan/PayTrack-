@@ -326,9 +326,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
         fullWidth
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            İşlem Geçmişi
-          </Typography>
+          İşlem Geçmişi
           <IconButton onClick={() => setHistoryDialogOpen(false)} size="small">
             <CloseIcon />
           </IconButton>
