@@ -32,6 +32,7 @@ import {
   Refresh as RefreshIcon,
   Close as CloseIcon,
   Search as SearchIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import PDFViewer from './PDFViewer';
 
@@ -59,6 +60,7 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
   const [pdfGenerating, setPdfGenerating] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState<string | null>(null);
   const theme = useTheme();
 
   const fetchCustomers = async () => {
@@ -167,6 +169,31 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
   const handleViewPdf = (customerName: string) => {
     setSelectedCustomer(customerName);
     setPdfDialogOpen(true);
+  };
+
+  const handleDeleteCustomer = async (customerName: string) => {
+    if (!window.confirm(`${customerName} isimli müşteriyi silmek istediğinize emin misiniz?`)) {
+      return;
+    }
+
+    setDeletingCustomer(customerName);
+    try {
+      const response = await fetch(`http://localhost:5000/customers/${customerName}?user_id=${userId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setSuccess('Müşteri başarıyla silindi!');
+        fetchCustomers(); // Listeyi yenile
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Müşteri silinirken bir hata oluştu!');
+      }
+    } catch (err) {
+      setError('API\'ye bağlanılamadı!');
+    } finally {
+      setDeletingCustomer(null);
+    }
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -323,18 +350,33 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
                         {customer.debt.toLocaleString('tr-TR')} ₺
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title="PDF Oluştur">
-                          <IconButton
-                            onClick={() => handleGeneratePdf(customer.name)}
-                            disabled={pdfGenerating === customer.name}
-                          >
-                            {pdfGenerating === customer.name ? (
-                              <CircularProgress size={24} />
-                            ) : (
-                              <PdfIcon />
-                            )}
-                          </IconButton>
-                        </Tooltip>
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                          <Tooltip title="PDF Oluştur">
+                            <IconButton
+                              onClick={() => handleGeneratePdf(customer.name)}
+                              disabled={pdfGenerating === customer.name}
+                            >
+                              {pdfGenerating === customer.name ? (
+                                <CircularProgress size={24} />
+                              ) : (
+                                <PdfIcon />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Müşteriyi Sil">
+                            <IconButton
+                              onClick={() => handleDeleteCustomer(customer.name)}
+                              disabled={deletingCustomer === customer.name}
+                              color="error"
+                            >
+                              {deletingCustomer === customer.name ? (
+                                <CircularProgress size={24} />
+                              ) : (
+                                <DeleteIcon />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}

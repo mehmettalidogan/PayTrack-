@@ -18,7 +18,7 @@ app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:3000", "http://localhost:5173"],
-        "methods": ["GET", "POST", "OPTIONS"],
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 })
@@ -309,6 +309,31 @@ def get_customer_transactions(customer_name):
 def test_log():
     print("Test log: Backend çalışıyor!")
     return jsonify({"message": "Test başarılı, terminal loglarını kontrol et!"})
+
+@app.route('/customers/<customer_name>', methods=['DELETE'])
+def delete_customer(customer_name):
+    user_id = request.args.get('user_id')
+    
+    if not user_id:
+        return jsonify({'error': 'user_id gerekli!'}), 400
+    
+    try:
+        customer = db.session.query(Customer).filter_by(
+            user_id=user_id,
+            name=customer_name
+        ).first()
+        
+        if not customer:
+            return jsonify({'error': 'Müşteri bulunamadı!'}), 404
+        
+        # Müşteriyi sil
+        db.session.delete(customer)
+        db.session.commit()
+        
+        return jsonify({'message': 'Müşteri başarıyla silindi!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Müşteri silinirken bir hata oluştu: {str(e)}'}), 500
 
 if __name__ == "__main__":
     print(f"Database path: {db_path}")
