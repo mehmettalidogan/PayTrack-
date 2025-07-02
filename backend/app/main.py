@@ -1,7 +1,10 @@
 import sys
 import os
 import subprocess
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+# Proje kök dizinini Python path'ine ekle
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -12,7 +15,13 @@ from backend.models.pdf_generator import save_pdf, delete_old_pdfs
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # CORS desteği eklendi
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5173"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Absolute path to the database file
 db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "paytrack.db"))
@@ -172,8 +181,14 @@ def generate_pdf():
         if not customer:
             return jsonify({'error': 'Müşteri bulunamadı!'}), 404
         
-        save_pdf(customer)
-        return jsonify({'message': 'PDF başarıyla oluşturuldu!'})
+        pdf_path = save_pdf(customer)
+        filename = os.path.basename(pdf_path)
+        
+        return jsonify({
+            'message': 'PDF başarıyla oluşturuldu!',
+            'filename': filename,
+            'url': f'/pdf/{filename}'
+        })
     except Exception as e:
         return jsonify({'error': f'PDF oluşturulurken bir hata oluştu: {str(e)}'}), 500
 
@@ -289,6 +304,11 @@ def get_customer_transactions(customer_name):
         })
     except Exception as e:
         return jsonify({'error': f'İşlem geçmişi alınırken bir hata oluştu: {str(e)}'}), 500
+
+@app.route("/test-log")
+def test_log():
+    print("Test log: Backend çalışıyor!")
+    return jsonify({"message": "Test başarılı, terminal loglarını kontrol et!"})
 
 if __name__ == "__main__":
     print(f"Database path: {db_path}")
