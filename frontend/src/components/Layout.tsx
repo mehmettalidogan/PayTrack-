@@ -194,10 +194,23 @@ const Layout = ({ children, onThemeToggle, isDarkMode, onLogout }: LayoutProps) 
             ? 'rgba(18, 18, 18, 0.8)'
             : 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(6px)',
+          p: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
       >
         <Toolbar />
-        {children}
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            p: 1,
+            overflow: 'auto'
+          }}
+        >
+          {children}
+        </Box>
       </Box>
     </Box>
   );

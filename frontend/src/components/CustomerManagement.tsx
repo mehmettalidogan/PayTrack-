@@ -155,8 +155,8 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+    <Box sx={{ p: 2, height: '100%' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600 }}>
           Müşteri Yönetimi
         </Typography>
@@ -175,8 +175,8 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
         </IconButton>
       </Box>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
+      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)' }}>
+        <Grid item xs={12} sx={{ height: '40%' }}>
           <Fade in timeout={800}>
             <Card
               sx={{
@@ -187,16 +187,25 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
                 backdropFilter: 'blur(6px)',
                 transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
                 '&:hover': {
-                  transform: 'translateY(-4px)',
+                  transform: 'translateX(4px)',
                   boxShadow: theme.shadows[4],
                 }
               }}
             >
-              <CardContent>
+              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="h6" gutterBottom>
                   Yeni Müşteri Ekle
                 </Typography>
-                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box 
+                  component="form" 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'row', 
+                    gap: 2,
+                    flex: 1,
+                    alignItems: 'center'
+                  }}
+                >
                   <TextField
                     label="Müşteri Adı"
                     value={newCustomer.name}
@@ -229,6 +238,7 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
                     startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
                     sx={{
                       height: 40,
+                      minWidth: 150,
                       textTransform: 'none',
                       fontWeight: 600,
                     }}
@@ -241,7 +251,7 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
           </Fade>
         </Grid>
 
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} sx={{ height: '60%' }}>
           <Fade in timeout={1000}>
             <Card
               sx={{
@@ -250,95 +260,97 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
                   ? 'rgba(255, 255, 255, 0.05)'
                   : 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(6px)',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">
                   Müşteri Listesi
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="caption" color="textSecondary">
+                  {customers.length} müşteri
+                </Typography>
+              </Box>
+              
+              <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+                <Grid container spacing={2}>
                   {customers.map((customer) => (
-                    <Box
-                      key={customer.name}
-                      sx={{
-                        p: 2,
-                        borderRadius: 1,
-                        border: `1px solid ${theme.palette.divider}`,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : 'rgba(0, 0, 0, 0.02)',
-                          transform: 'translateX(4px)',
-                        }
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {customer.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {customer.product} | Borç: {customer.debt}₺
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="PDF Görüntüle">
-                          <IconButton
-                            onClick={() => handleViewPdf(customer.name)}
-                            size="small"
-                          >
-                            <PdfIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleGeneratePdf(customer.name)}
-                          disabled={pdfGenerating === customer.name}
-                          startIcon={
-                            pdfGenerating === customer.name 
-                              ? <CircularProgress size={20} /> 
-                              : <PdfIcon />
+                    <Grid item xs={12} key={customer.name}>
+                      <Card
+                        sx={{
+                          p: 2,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${theme.palette.divider}`,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.05)'
+                              : 'rgba(0, 0, 0, 0.02)',
+                            transform: 'translateX(4px)',
                           }
-                        >
-                          {pdfGenerating === customer.name ? 'Oluşturuluyor...' : 'PDF Oluştur'}
-                        </Button>
-                      </Box>
-                    </Box>
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              {customer.name}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {customer.product}
+                            </Typography>
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                mt: 1,
+                                color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
+                                fontWeight: 600
+                              }}
+                            >
+                              Borç: {customer.debt.toLocaleString('tr-TR')} ₺
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <Tooltip title="PDF Oluştur">
+                              <IconButton
+                                onClick={() => handleGeneratePdf(customer.name)}
+                                disabled={pdfGenerating === customer.name}
+                                size="small"
+                              >
+                                {pdfGenerating === customer.name ? (
+                                  <CircularProgress size={20} />
+                                ) : (
+                                  <PdfIcon />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </Box>
+                      </Card>
+                    </Grid>
                   ))}
-                </Box>
-              </CardContent>
+                </Grid>
+              </Box>
             </Card>
           </Fade>
         </Grid>
       </Grid>
 
-      {/* PDF Dialog */}
       <Dialog
         open={pdfDialogOpen}
         onClose={() => setPdfDialogOpen(false)}
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2 }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
-            {selectedCustomer} - PDF Raporları
+            {selectedCustomer} - PDF Görüntüleyici
           </Typography>
-          <IconButton
-            onClick={() => setPdfDialogOpen(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
-          >
+          <IconButton onClick={() => setPdfDialogOpen(false)} size="small">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent>
           {selectedCustomer && (
             <PDFViewer customerName={selectedCustomer} />
           )}
@@ -346,24 +358,22 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
       </Dialog>
 
       <Snackbar
-        open={!!error}
+        open={!!error || !!success}
         autoHideDuration={6000}
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        onClose={() => {
+          setError('');
+          setSuccess('');
+        }}
       >
-        <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
-          {error}
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={!!success}
-        autoHideDuration={6000}
-        onClose={() => setSuccess('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
-          {success}
+        <Alert
+          severity={error ? 'error' : 'success'}
+          variant="filled"
+          onClose={() => {
+            setError('');
+            setSuccess('');
+          }}
+        >
+          {error || success}
         </Alert>
       </Snackbar>
     </Box>

@@ -77,8 +77,8 @@ const Dashboard = ({ userId }: DashboardProps) => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+    <Box sx={{ p: 2, height: '100%' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600 }}>
           Gösterge Paneli
         </Typography>
@@ -97,9 +97,9 @@ const Dashboard = ({ userId }: DashboardProps) => {
         </IconButton>
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)' }}>
         {cards.map((card, index) => (
-          <Grid item xs={12} md={4} key={index}>
+          <Grid item xs={12} key={index} sx={{ height: '33.33%' }}>
             <Fade in timeout={500 + index * 200}>
               <Card
                 sx={{
@@ -110,31 +110,38 @@ const Dashboard = ({ userId }: DashboardProps) => {
                   backdropFilter: 'blur(6px)',
                   transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
                   '&:hover': {
-                    transform: 'translateY(-4px)',
+                    transform: 'translateX(4px)',
                     boxShadow: theme.shadows[4],
                   }
                 }}
               >
-                <CardContent>
-                  <Box sx={{ position: 'relative', height: '140px' }}>
+                <CardContent sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ 
+                    position: 'relative', 
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 4
+                  }}>
                     {loading ? (
                       <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <LinearProgress sx={{ width: '80%' }} />
                       </Box>
                     ) : (
-                      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Box sx={{ color: card.color, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, borderRadius: 2, bgcolor: `${card.color}20` }}>
+                            {card.icon}
+                          </Box>
                           <Typography variant="h6" color="textSecondary">
                             {card.title}
                           </Typography>
-                          <Box sx={{ color: card.color }}>
-                            {card.icon}
-                          </Box>
                         </Box>
-                        <Typography variant="h4" sx={{ mt: 2, fontWeight: 600, color: card.color }}>
+                        <Typography variant="h3" sx={{ fontWeight: 600, color: card.color }}>
                           {card.value}
                         </Typography>
-                      </Box>
+                      </>
                     )}
                   </Box>
                 </CardContent>

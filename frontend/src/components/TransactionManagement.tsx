@@ -152,13 +152,13 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 600 }}>
+    <Box sx={{ p: 2, height: '100%' }}>
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 600 }}>
         İşlem Yönetimi
       </Typography>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)' }}>
+        <Grid item xs={12} sx={{ height: '40%' }}>
           <Fade in timeout={800}>
             <Card
               sx={{
@@ -169,16 +169,25 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                 backdropFilter: 'blur(6px)',
                 transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
                 '&:hover': {
-                  transform: 'translateY(-4px)',
+                  transform: 'translateX(4px)',
                   boxShadow: theme.shadows[4],
                 }
               }}
             >
-              <CardContent>
+              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="h6" gutterBottom>
                   Yeni İşlem Ekle
                 </Typography>
-                <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box 
+                  component="form" 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'row', 
+                    gap: 2,
+                    flex: 1,
+                    alignItems: 'center'
+                  }}
+                >
                   <TextField
                     select
                     label="Müşteri"
@@ -222,6 +231,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                     startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
                     sx={{
                       height: 40,
+                      minWidth: 150,
                       textTransform: 'none',
                       fontWeight: 600,
                     }}
@@ -234,7 +244,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
           </Fade>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} sx={{ height: '60%' }}>
           <Fade in timeout={1000}>
             <Card
               sx={{
@@ -243,91 +253,88 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                   ? 'rgba(255, 255, 255, 0.05)'
                   : 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(6px)',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">
                   Müşteri Listesi
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {customers.map((customer) => (
-                    <Box
-                      key={customer.name}
-                      sx={{
-                        p: 2,
-                        borderRadius: 1,
-                        border: `1px solid ${theme.palette.divider}`,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : 'rgba(0, 0, 0, 0.02)',
-                          transform: 'translateX(4px)',
-                        }
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {customer.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {customer.product}
-                        </Typography>
-                        <Typography 
-                          variant="body1" 
-                          sx={{ 
-                            mt: 1,
-                            color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
-                            fontWeight: 600
+                <Typography variant="caption" color="textSecondary">
+                  {customers.length} müşteri
+                </Typography>
+              </Box>
+              
+              <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+                <TableContainer component={Paper} sx={{ boxShadow: 'none', backgroundColor: 'transparent' }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Müşteri Adı</TableCell>
+                        <TableCell>Ürün</TableCell>
+                        <TableCell align="right">Borç</TableCell>
+                        <TableCell align="right">İşlemler</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {customers.map((customer) => (
+                        <TableRow 
+                          key={customer.name}
+                          sx={{
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.05)'
+                                : 'rgba(0, 0, 0, 0.02)',
+                            }
                           }}
                         >
-                          Borç: {customer.debt.toLocaleString('tr-TR')} ₺
-                        </Typography>
-                      </Box>
-                      <Tooltip title="İşlem Geçmişi">
-                        <IconButton
-                          onClick={() => handleViewHistory(customer.name)}
-                          size="small"
-                        >
-                          <HistoryIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
+                          <TableCell>{customer.name}</TableCell>
+                          <TableCell>{customer.product}</TableCell>
+                          <TableCell align="right" sx={{ 
+                            color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
+                            fontWeight: 600
+                          }}>
+                            {customer.debt.toLocaleString('tr-TR')} ₺
+                          </TableCell>
+                          <TableCell align="right">
+                            <Tooltip title="İşlem Geçmişi">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleViewHistory(customer.name)}
+                              >
+                                <HistoryIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
             </Card>
           </Fade>
         </Grid>
       </Grid>
 
-      {/* İşlem Geçmişi Dialog */}
       <Dialog
         open={historyDialogOpen}
         onClose={() => setHistoryDialogOpen(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2 }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">
             İşlem Geçmişi
           </Typography>
-          <IconButton
-            onClick={() => setHistoryDialogOpen(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
-          >
+          <IconButton onClick={() => setHistoryDialogOpen(false)} size="small">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
-          <TableContainer component={Paper}>
+        <DialogContent>
+          <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
@@ -340,19 +347,17 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
               <TableBody>
                 {transactions.map((transaction, index) => (
                   <TableRow key={index}>
-                    <TableCell>{transaction.timestamp}</TableCell>
-                    <TableCell>
-                      {transaction.transaction_type === 'borc' ? 'Borç Ekleme' : 'Ödeme'}
-                    </TableCell>
+                    <TableCell>{new Date(transaction.timestamp).toLocaleString('tr-TR')}</TableCell>
+                    <TableCell>{transaction.transaction_type === 'borc' ? 'Borç' : 'Ödeme'}</TableCell>
                     <TableCell align="right" sx={{
-                      color: transaction.transaction_type === 'borc'
-                        ? theme.palette.error.main
+                      color: transaction.transaction_type === 'borc' 
+                        ? theme.palette.error.main 
                         : theme.palette.success.main,
                       fontWeight: 600
                     }}>
                       {transaction.amount.toLocaleString('tr-TR')} ₺
                     </TableCell>
-                    <TableCell>{transaction.description}</TableCell>
+                    <TableCell>{transaction.description || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -362,24 +367,22 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
       </Dialog>
 
       <Snackbar
-        open={!!error}
+        open={!!error || !!success}
         autoHideDuration={6000}
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        onClose={() => {
+          setError('');
+          setSuccess('');
+        }}
       >
-        <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
-          {error}
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={!!success}
-        autoHideDuration={6000}
-        onClose={() => setSuccess('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
-          {success}
+        <Alert
+          severity={error ? 'error' : 'success'}
+          variant="filled"
+          onClose={() => {
+            setError('');
+            setSuccess('');
+          }}
+        >
+          {error || success}
         </Alert>
       </Snackbar>
     </Box>
