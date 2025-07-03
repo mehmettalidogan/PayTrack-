@@ -57,22 +57,24 @@ def home():
 def create_user():
     data = request.get_json()
     username = data.get("username")
+    password = data.get("password")
     
-    if not username:
-        return jsonify({"error": "Kullanıcı adı gerekli"}), 400
+    if not username or not password:
+        return jsonify({"error": "Kullanıcı adı ve şifre gerekli"}), 400
     
     existing_user = db.session.query(User).filter(User.username == username).first()
     if existing_user:
         return jsonify({"error": "Kullanıcı adı zaten kullanımda"}), 400
     
-    user = User(username=username)
-    db.session.add(user)
-    db.session.commit()
-    
-    return jsonify({
-        "message": "Kullanıcı başarıyla oluşturuldu",
-        "user_id": user.id
-    })
+    try:
+        user = User.create_user(username=username, password=password)
+        return jsonify({
+            "message": "Kullanıcı başarıyla oluşturuldu",
+            "user_id": user.id
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Kullanıcı oluşturulurken bir hata oluştu: {str(e)}"}), 500
 
 @app.route("/customers/", methods=["GET", "POST"])
 def handle_customers():
@@ -232,17 +234,19 @@ def get_dashboard_data():
 @app.route('/login/', methods=['POST'])
 def login():
     data = request.json
-    required_fields = ['username', 'password']
+    username = data.get('username')
+    password = data.get('password')
     
-    if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Eksik alanlar var!'}), 400
+    if not username or not password:
+        return jsonify({'error': 'Kullanıcı adı ve şifre gerekli!'}), 400
     
     try:
-        # Basit bir doğrulama - gerçek uygulamada güvenli bir şekilde yapılmalı
-        if data['username'] == 'admin' and data['password'] == 'admin':
+        user = db.session.query(User).filter(User.username == username).first()
+        
+        if user and user.check_password(password):
             return jsonify({
                 'message': 'Giriş başarılı!',
-                'user_id': 'admin'
+                'user_id': user.id
             })
         else:
             return jsonify({'error': 'Geçersiz kullanıcı adı veya şifre!'}), 401

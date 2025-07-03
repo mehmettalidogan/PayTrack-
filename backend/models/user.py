@@ -3,15 +3,31 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, Optional
 from ..database.database import Base, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(256))
     
     # İlişkiler
     customers: Mapped[List["Customer"]] = relationship(back_populates="user")
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
+    @classmethod
+    def create_user(cls, username: str, password: str) -> "User":
+        user = cls(username=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        return user
 
     def musteri_ekle(self, name: str, urun: str, borc: float = 0.0) -> "Customer":
         from .customer import Customer

@@ -1,20 +1,57 @@
-import sys
+import sqlite3
 import os
 
-# Projenin kök dizinini Python path'ine ekle
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))
-sys.path.append(project_root)
-
-from backend.database.database import Base, engine
-from backend.models.user import User
-from backend.models.customer import Customer, Transaction
-
-def init_db():
-    # Tüm tabloları oluştur
-    Base.metadata.create_all(bind=engine)
+def create_tables():
+    # Veritabanı dosyasının yolu
+    db_path = os.path.join(os.path.dirname(__file__), 'paytrack.db')
+    
+    # Eğer veritabanı dosyası varsa sil
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    
+    # Veritabanına bağlan
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Users tablosunu oluştur
+    cursor.execute('''
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL
+    )
+    ''')
+    
+    # Customers tablosunu oluştur
+    cursor.execute('''
+    CREATE TABLE customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        urun TEXT NOT NULL,
+        borc REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+    ''')
+    
+    # Transactions tablosunu oluştur
+    cursor.execute('''
+    CREATE TABLE transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        transaction_type TEXT NOT NULL,
+        description TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (customer_id) REFERENCES customers (id)
+    )
+    ''')
+    
+    # Değişiklikleri kaydet ve bağlantıyı kapat
+    conn.commit()
+    conn.close()
+    
+    print("Veritabanı tabloları başarıyla oluşturuldu!")
 
 if __name__ == "__main__":
-    print("Veritabanı tabloları oluşturuluyor...")
-    init_db()
-    print("Veritabanı tabloları başarıyla oluşturuldu!") 
+    create_tables() 

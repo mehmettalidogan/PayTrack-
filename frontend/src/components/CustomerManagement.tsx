@@ -46,17 +46,23 @@ interface Customer {
   debt: number;
 }
 
+interface NewCustomer {
+  name: string;
+  product: string;
+  debt: string | number;
+}
+
 const CustomerManagement = ({ userId }: CustomerManagementProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newCustomer, setNewCustomer] = useState({
+  const [newCustomer, setNewCustomer] = useState<NewCustomer>({
     name: '',
     product: '',
-    debt: '',
+    debt: ''
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
@@ -90,13 +96,41 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
     fetchCustomers();
   }, [userId]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === 'searchTerm') {
+      setSearchTerm(value);
+    } else if (name === 'debt') {
+      setNewCustomer(prev => ({
+        ...prev,
+        [name]: value === '' ? '' : Number(value)
+      }));
+    } else {
+      setNewCustomer(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.select();
+  };
+
+  const resetForm = () => {
+    setNewCustomer({ name: '', product: '', debt: '' });
+    setSearchTerm('');
+    setSelectedCustomer(null);
+    setPdfDialogOpen(false);
+  };
+
   const handleAddCustomer = async () => {
     if (!newCustomer.name || !newCustomer.product || !newCustomer.debt) {
       setError('Tüm alanları doldurun!');
       return;
     }
 
-    const parsedDebt = parseFloat(newCustomer.debt);
+    const parsedDebt = parseFloat(newCustomer.debt.toString());
     if (isNaN(parsedDebt)) {
       setError('Geçersiz borç tutarı!');
       return;
@@ -119,7 +153,7 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
 
       if (response.ok) {
         setSuccess('Müşteri başarıyla eklendi!');
-        setNewCustomer({ name: '', product: '', debt: '' });
+        resetForm();
         fetchCustomers();
       } else {
         const data = await response.json();
@@ -184,7 +218,8 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
 
       if (response.ok) {
         setSuccess('Müşteri başarıyla silindi!');
-        fetchCustomers(); // Listeyi yenile
+        resetForm();
+        await fetchCustomers();
       } else {
         const data = await response.json();
         setError(data.error || 'Müşteri silinirken bir hata oluştu!');
@@ -193,6 +228,12 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
       setError('API\'ye bağlanılamadı!');
     } finally {
       setDeletingCustomer(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
     }
   };
 
@@ -255,25 +296,37 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
                 >
                   <TextField
                     label="Müşteri Adı"
+                    name="name"
                     value={newCustomer.name}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    onFocus={handleFocus}
                     fullWidth
                     size="small"
+                    autoComplete="off"
                   />
                   <TextField
                     label="Ürün"
+                    name="product"
                     value={newCustomer.product}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, product: e.target.value })}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    onFocus={handleFocus}
                     fullWidth
                     size="small"
+                    autoComplete="off"
                   />
                   <TextField
                     label="Borç"
+                    name="debt"
                     type="number"
                     value={newCustomer.debt}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, debt: e.target.value })}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    onFocus={handleFocus}
                     fullWidth
                     size="small"
+                    autoComplete="off"
                     InputProps={{
                       endAdornment: <Typography variant="caption">₺</Typography>
                     }}
@@ -303,8 +356,12 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
             fullWidth
             size="small"
             label="Müşteri Ara..."
+            name="searchTerm"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            autoComplete="off"
             sx={{ mb: 2 }}
             placeholder="İsim veya ürüne göre ara"
             InputProps={{
@@ -322,8 +379,12 @@ const CustomerManagement = ({ userId }: CustomerManagementProps) => {
               <TextField
                 size="small"
                 placeholder="Müşteri veya ürün ara..."
+                name="searchTerm"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                autoComplete="off"
                 sx={{ width: 250 }}
                 InputProps={{
                   startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
