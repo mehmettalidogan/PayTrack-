@@ -337,6 +337,37 @@ def delete_customer(customer_name):
         db.session.rollback()
         return jsonify({'error': f'Müşteri silinirken bir hata oluştu: {str(e)}'}), 500
 
+@app.route("/customers/alacak-ekle/", methods=["POST"])
+def add_receivable():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    customer_name = data.get("customer_name")
+    amount = data.get("amount")
+    description = data.get("description", "")
+    
+    if not all([user_id, customer_name, amount]):
+        return jsonify({"error": "user_id, customer_name ve amount alanları gerekli"}), 400
+    
+    try:
+        amount = float(amount)
+        customer = db.session.query(Customer).filter_by(
+            user_id=user_id,
+            name=customer_name
+        ).first()
+        
+        if not customer:
+            return jsonify({"error": "Müşteri bulunamadı"}), 404
+        
+        customer.add_transaction('alacak', amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), description)
+        db.session.commit()
+        
+        return jsonify({"message": "Alacak başarıyla kaydedildi"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Alacak eklenirken bir hata oluştu: {str(e)}"}), 500
+
 if __name__ == "__main__":
     print(f"Database path: {db_path}")
     app.run(debug=True, host='0.0.0.0')

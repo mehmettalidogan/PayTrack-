@@ -57,7 +57,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [transactionType, setTransactionType] = useState<'borc' | 'odeme'>('borc');
+  const [transactionType, setTransactionType] = useState<'borc' | 'odeme' | 'alacak'>('borc');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -118,7 +118,19 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
 
     setLoading(true);
     try {
-      const endpoint = transactionType === 'borc' ? 'borc-ekle' : 'odeme-yap';
+      let endpoint;
+      switch (transactionType) {
+        case 'borc':
+          endpoint = 'borc-ekle';
+          break;
+        case 'odeme':
+          endpoint = 'odeme-yap';
+          break;
+        case 'alacak':
+          endpoint = 'alacak-ekle';
+          break;
+      }
+      
       const response = await fetch(`http://localhost:5000/customers/${endpoint}/`, {
         method: 'POST',
         headers: {
@@ -133,7 +145,11 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
       });
 
       if (response.ok) {
-        setSuccess(`${transactionType === 'borc' ? 'Borç' : 'Ödeme'} işlemi başarıyla kaydedildi!`);
+        setSuccess(`${
+          transactionType === 'borc' ? 'Borç' : 
+          transactionType === 'odeme' ? 'Ödeme' : 
+          'Alacak'
+        } işlemi başarıyla kaydedildi!`);
         setSelectedCustomer('');
         setAmount('');
         setDescription('');
@@ -155,13 +171,31 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   };
 
   return (
-    <Box sx={{ p: 2, height: '100%' }}>
+    <Box sx={{ 
+      p: 2, 
+      height: '100%',
+      '& .MuiCard-root': {
+        marginRight: '12px'  // Scrollbar için sağdan boşluk
+      },
+      '& ::-webkit-scrollbar': {
+        width: '8px',
+        position: 'absolute',
+        right: 0
+      },
+      '& ::-webkit-scrollbar-track': {
+        background: 'transparent'
+      },
+      '& ::-webkit-scrollbar-thumb': {
+        background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+        borderRadius: '4px'
+      }
+    }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 600 }}>
         İşlem Yönetimi
       </Typography>
 
-      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)' }}>
-        <Grid item xs={12} sx={{ height: '40%' }}>
+      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)', width: '98%' }}>
+        <Grid item xs={12} sx={{ height: '65%' }}>
           <Fade in timeout={800}>
             <Card
               sx={{
@@ -174,11 +208,12 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                 '&:hover': {
                   transform: 'translateX(4px)',
                   boxShadow: theme.shadows[4],
-                }
+                },
+                p: 2
               }}
             >
-              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="h6" gutterBottom>
+              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <Typography variant="h5" gutterBottom>
                   Yeni İşlem Ekle
                 </Typography>
                 <Box 
@@ -190,53 +225,66 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                     flex: 1,
                   }}
                 >
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                    <TextField
-                      select
-                      label="Müşteri"
-                      value={selectedCustomer}
-                      onChange={(e) => setSelectedCustomer(e.target.value)}
-                      fullWidth
-                      size="small"
-                    >
-                      {customers.map((customer) => (
-                        <MenuItem key={customer.name} value={customer.name}>
-                          {customer.name} - Mevcut Borç: {customer.debt.toLocaleString('tr-TR')} ₺
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>İşlem Tipi</InputLabel>
-                      <Select
-                        value={transactionType}
-                        label="İşlem Tipi"
-                        onChange={(e) => setTransactionType(e.target.value as 'borc' | 'odeme')}
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        select
+                        label="Müşteri"
+                        value={selectedCustomer}
+                        onChange={(e) => setSelectedCustomer(e.target.value)}
+                        fullWidth
+                        sx={{ '& .MuiInputBase-input': { fontSize: '1rem', py: 1.5 } }}
                       >
-                        <MenuItem value="borc">Borç Ekle</MenuItem>
-                        <MenuItem value="odeme">Ödeme Al</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <TextField
-                      label="Tutar"
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      fullWidth
-                      size="small"
-                      InputProps={{
-                        endAdornment: <Typography variant="caption">₺</Typography>
-                      }}
-                    />
-                  </Box>
+                        {customers.map((customer) => (
+                          <MenuItem key={customer.name} value={customer.name}>
+                            {customer.name} - Mevcut Borç: {customer.debt.toLocaleString('tr-TR')} ₺
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel>İşlem Tipi</InputLabel>
+                        <Select
+                          value={transactionType}
+                          label="İşlem Tipi"
+                          onChange={(e) => setTransactionType(e.target.value as 'borc' | 'odeme' | 'alacak')}
+                          sx={{ '& .MuiInputBase-input': { fontSize: '1rem', py: 1.5 } }}
+                        >
+                          <MenuItem value="borc">Borç Ekle</MenuItem>
+                          <MenuItem value="odeme">Ödeme Al</MenuItem>
+                          <MenuItem value="alacak">Alacak Ekle</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        label="Tutar"
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        fullWidth
+                        sx={{ '& .MuiInputBase-input': { fontSize: '1rem', py: 1.5 } }}
+                        InputProps={{
+                          endAdornment: <Typography variant="caption" sx={{ fontSize: '1rem' }}>₺</Typography>
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
                   
                   <TextField
                     label="Açıklama"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     fullWidth
-                    size="small"
                     multiline
-                    rows={2}
+                    rows={4}
+                    sx={{ 
+                      '& .MuiInputBase-input': { 
+                        fontSize: '1rem',
+                        lineHeight: 1.5
+                      }
+                    }}
                     placeholder="İşlem için açıklama ekleyin (opsiyonel)"
                   />
 
@@ -244,16 +292,16 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                     variant="contained"
                     onClick={handleAddTransaction}
                     disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+                    startIcon={loading ? <CircularProgress size={24} /> : <AddIcon />}
                     sx={{
-                      height: 40,
+                      height: 48,
                       alignSelf: 'flex-end',
-                      minWidth: 150,
-                      textTransform: 'none',
-                      fontWeight: 600,
+                      minWidth: 180,
+                      fontSize: '1rem',
+                      px: 3
                     }}
                   >
-                    {loading ? 'İşlem Kaydediliyor...' : 'İşlemi Kaydet'}
+                    {loading ? 'İşleniyor...' : 'İşlemi Kaydet'}
                   </Button>
                 </Box>
               </CardContent>
@@ -363,11 +411,13 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                 {transactions.map((transaction, index) => (
                   <TableRow key={index}>
                     <TableCell>{new Date(transaction.timestamp).toLocaleString('tr-TR')}</TableCell>
-                    <TableCell>{transaction.transaction_type === 'borc' ? 'Borç' : 'Ödeme'}</TableCell>
+                    <TableCell>{transaction.transaction_type === 'borc' ? 'Borç' : transaction.transaction_type === 'odeme' ? 'Ödeme' : 'Alacak'}</TableCell>
                     <TableCell align="right" sx={{
                       color: transaction.transaction_type === 'borc' 
                         ? theme.palette.error.main 
-                        : theme.palette.success.main,
+                        : transaction.transaction_type === 'odeme' 
+                          ? theme.palette.success.main 
+                          : theme.palette.warning.main,
                       fontWeight: 600
                     }}>
                       {transaction.amount.toLocaleString('tr-TR')} ₺
