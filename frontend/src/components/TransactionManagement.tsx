@@ -96,7 +96,10 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
       const data = await response.json();
       
       if (response.ok) {
-        setTransactions(data.transactions);
+        const sortedTransactions = data.transactions.sort((a: Transaction, b: Transaction) => {
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        });
+        setTransactions(sortedTransactions);
       } else {
         setError('İşlem geçmişi alınamadı!');
       }
