@@ -28,11 +28,13 @@ import {
   FormControl,
   InputLabel,
   Select,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
   History as HistoryIcon,
   Close as CloseIcon,
+  Search,
 } from '@mui/icons-material';
 
 interface TransactionManagementProps {
@@ -54,6 +56,8 @@ interface Transaction {
 
 const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -77,6 +81,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
           return { name, product, debt };
         });
         setCustomers(parsedCustomers);
+        setFilteredCustomers(parsedCustomers);
       } else {
         setError('Müşteri listesi alınamadı!');
       }
@@ -103,6 +108,19 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   useEffect(() => {
     fetchCustomers();
   }, [userId]);
+
+  // Arama fonksiyonu
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredCustomers(customers);
+    } else {
+      const query = searchQuery.toLowerCase().trim();
+      const filtered = customers.filter(customer => 
+        customer.name.toLowerCase().includes(query)
+      );
+      setFilteredCustomers(filtered);
+    }
+  }, [searchQuery, customers]);
 
   const handleAddTransaction = async () => {
     if (!selectedCustomer || !amount) {
@@ -176,14 +194,9 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
         İşlem Yönetimi
       </Typography>
 
-      <Grid container spacing={2} sx={{ 
-        height: 'calc(100vh - 180px)',
-        maxWidth: '100vw',
-        pr: 2,
-        ml: 'auto'  // Sağa doğru hizalama
-      }}>
-        <Grid item xs={12} sx={{ height: '35%' }}>
-          <Fade in timeout={800}>
+      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)' }}>
+        <Grid item xs={12} sx={{ height: '65%', display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ width: '100%', minWidth: '800px' }}>
             <Card
               sx={{
                 height: '100%',
@@ -195,8 +208,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                 '&:hover': {
                   transform: 'translateX(4px)',
                   boxShadow: theme.shadows[4],
-                },
-                minWidth: '800px'  // Minimum genişlik
+                }
               }}
             >
               <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -266,7 +278,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                     fullWidth
                     multiline
                     rows={4}
-                    sx={{ 
+                    sx={{
                       '& .MuiInputBase-input': { 
                         fontSize: '1rem',
                         lineHeight: 1.5
@@ -293,11 +305,11 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                 </Box>
               </CardContent>
             </Card>
-          </Fade>
+          </Box>
         </Grid>
 
-        <Grid item xs={12} sx={{ height: '60%' }}>
-          <Fade in timeout={1000}>
+        <Grid item xs={12} sx={{ height: '65%', display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ width: '100%', minWidth: '800px' }}>
             <Card
               sx={{
                 height: '100%',
@@ -305,69 +317,121 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                   ? 'rgba(255, 255, 255, 0.05)'
                   : 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(6px)',
-                display: 'flex',
-                flexDirection: 'column'
+                transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                '&:hover': {
+                  transform: 'translateX(4px)',
+                  boxShadow: theme.shadows[4],
+                }
               }}
             >
-              <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">
-                  Müşteri Listesi
-                </Typography>
-                <Typography variant="caption" color="textSecondary">
-                  {customers.length} müşteri
-                </Typography>
-              </Box>
-              
-              <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-                <TableContainer component={Paper} sx={{ boxShadow: 'none', backgroundColor: 'transparent' }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Müşteri Adı</TableCell>
-                        <TableCell>Ürün</TableCell>
-                        <TableCell align="right">Borç</TableCell>
-                        <TableCell align="right">İşlemler</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {customers.map((customer) => (
-                        <TableRow 
-                          key={customer.name}
-                          sx={{
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              backgroundColor: theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.05)'
-                                : 'rgba(0, 0, 0, 0.02)',
-                            }
-                          }}
-                        >
-                          <TableCell>{customer.name}</TableCell>
-                          <TableCell>{customer.product}</TableCell>
-                          <TableCell align="right" sx={{ 
-                            color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
-                            fontWeight: 600
-                          }}>
-                            {customer.debt.toLocaleString('tr-TR')} ₺
-                          </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="İşlem Geçmişi">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleViewHistory(customer.name)}
-                              >
-                                <HistoryIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
+              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      Müşteri Listesi
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {filteredCustomers.length} müşteri
+                    </Typography>
+                  </Box>
+                  <TextField
+                    size="small"
+                    placeholder="Müşteri Ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: theme.palette.mode === 'dark' 
+                          ? 'rgba(255,255,255,0.05)' 
+                          : 'rgba(0,0,0,0.02)'
+                      }
+                    }}
+                  />
+                </Box>
+                
+                <Box sx={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  p: 2,
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.05)' 
+                      : 'rgba(0,0,0,0.05)',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.2)' 
+                      : 'rgba(0,0,0,0.2)',
+                    borderRadius: '4px',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255,255,255,0.3)' 
+                        : 'rgba(0,0,0,0.3)',
+                    }
+                  }
+                }}>
+                  <TableContainer component={Paper} sx={{ boxShadow: 'none', backgroundColor: 'transparent' }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Müşteri</TableCell>
+                          <TableCell>Ürün</TableCell>
+                          <TableCell align="right">Borç</TableCell>
+                          <TableCell align="right">İşlemler</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
+                      </TableHead>
+                      <TableBody>
+                        {filteredCustomers.map((customer) => (
+                          <TableRow 
+                            key={customer.name}
+                            sx={{
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                backgroundColor: theme.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.05)'
+                                  : 'rgba(0, 0, 0, 0.02)',
+                              }
+                            }}
+                          >
+                            <TableCell>{customer.name}</TableCell>
+                            <TableCell>{customer.product}</TableCell>
+                            <TableCell align="right" sx={{ 
+                              color: customer.debt > 0 ? theme.palette.error.main : theme.palette.success.main,
+                              fontWeight: 600
+                            }}>
+                              {customer.debt.toLocaleString('tr-TR')} ₺
+                            </TableCell>
+                            <TableCell align="right">
+                              <Tooltip title="İşlem Geçmişi">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleViewHistory(customer.name)}
+                                >
+                                  <HistoryIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              </CardContent>
             </Card>
-          </Fade>
+          </Box>
         </Grid>
       </Grid>
 
