@@ -26,7 +26,7 @@ class Customer(Base):
         self.transactions = []  # [{type: 'borc'|'odeme', amount: float, date: str}]
 
     def add_transaction(self, transaction_type, amount, timestamp, description=''):
-        if transaction_type not in ['borc', 'odeme']:
+        if transaction_type not in ['borc', 'odeme', 'alacak']:
             raise ValueError('Geçersiz işlem tipi!')
         
         if amount <= 0:
@@ -47,9 +47,11 @@ class Customer(Base):
         # Borç tutarını güncelle
         if transaction_type == 'borc':
             self.borc += amount
-        else:  # odeme
+        elif transaction_type == 'odeme':
             if amount > self.borc:
                 raise ValueError('Ödeme tutarı mevcut borçtan büyük olamaz!')
+            self.borc -= amount
+        else:  # alacak
             self.borc -= amount
         
         db.session.commit()
