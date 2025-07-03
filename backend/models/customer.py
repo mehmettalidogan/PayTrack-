@@ -45,13 +45,11 @@ class Customer(Base):
         db.session.add(transaction)
         
         # Borç tutarını güncelle
-        if transaction_type == 'borc':
+        if transaction_type == 'borc' or transaction_type == 'alacak':
             self.borc += amount
-        elif transaction_type == 'odeme':
+        else:  # odeme
             if amount > self.borc:
                 raise ValueError('Ödeme tutarı mevcut borçtan büyük olamaz!')
-            self.borc -= amount
-        else:  # alacak
             self.borc -= amount
         
         db.session.commit()

@@ -125,7 +125,13 @@ def save_pdf(customer):
         )
         
         for transaction in sorted_transactions:
-            islem_tipi = 'Borç Ekleme' if transaction.transaction_type == 'borc' else 'Ödeme'
+            if transaction.transaction_type == 'borc':
+                islem_tipi = 'Borç Ekleme'
+            elif transaction.transaction_type == 'odeme':
+                islem_tipi = 'Ödeme'
+            else:  # alacak
+                islem_tipi = 'Alacak'
+            
             # String timestamp'i datetime'a çevir ve formatla
             tarih = parse_timestamp(transaction.timestamp).strftime('%d/%m/%Y %H:%M')
             table_data.append([
