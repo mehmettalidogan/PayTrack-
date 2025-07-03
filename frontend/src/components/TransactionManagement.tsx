@@ -171,31 +171,18 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
   };
 
   return (
-    <Box sx={{ 
-      p: 2, 
-      height: '100%',
-      '& .MuiCard-root': {
-        marginRight: '12px'  // Scrollbar için sağdan boşluk
-      },
-      '& ::-webkit-scrollbar': {
-        width: '8px',
-        position: 'absolute',
-        right: 0
-      },
-      '& ::-webkit-scrollbar-track': {
-        background: 'transparent'
-      },
-      '& ::-webkit-scrollbar-thumb': {
-        background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-        borderRadius: '4px'
-      }
-    }}>
+    <Box sx={{ p: 2, height: '100%' }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 600 }}>
         İşlem Yönetimi
       </Typography>
 
-      <Grid container spacing={2} sx={{ height: 'calc(100vh - 180px)', width: '98%' }}>
-        <Grid item xs={12} sx={{ height: '65%' }}>
+      <Grid container spacing={2} sx={{ 
+        height: 'calc(100vh - 180px)',
+        maxWidth: '100vw',
+        pr: 2,
+        ml: 'auto'  // Sağa doğru hizalama
+      }}>
+        <Grid item xs={12} sx={{ height: '35%' }}>
           <Fade in timeout={800}>
             <Card
               sx={{
@@ -209,7 +196,7 @@ const TransactionManagement = ({ userId }: TransactionManagementProps) => {
                   transform: 'translateX(4px)',
                   boxShadow: theme.shadows[4],
                 },
-                p: 2
+                minWidth: '800px'  // Minimum genişlik
               }}
             >
               <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
